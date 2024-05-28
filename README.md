@@ -37,7 +37,8 @@ aws lambda functions
     pip install opencv-python
     ```
 ## Create container
-1. ***docker run***: 새로운 컨테이너를 생성하고 실행합니다.
+1. docker 다운로드 : <a href="https://www.docker.com/products/docker-desktop/" target="_blank">docker-desktop</a>
+2. ***docker run*** : 새로운 컨테이너를 생성하고 실행합니다.
     ```bash
     docker run -it -v /host/directory:/container/directory --name <컨테이너 이름> <이미지 이름>:<태그>
     ```
@@ -49,10 +50,10 @@ aws lambda functions
     ```text
     -it 옵션은 Docker 컨테이너를 실행할 때 주로 사용되는 두 가지 플래그를 결합한 것입니다. 각각의 플래그는 다음과 같은 역할을 합니다:
    
-    1. -i (interactive):
+    1. -i (interactive) :
      1.1. -i 옵션은 컨테이너의 표준 입력(stdin)을 열어두어 인터랙티브 모드로 작동할 수 있게 합니다. 즉, 컨테이너가 사용자 입력을 받을 수 있게 해줍니다.
      1.2. 예를 들어, -i 옵션을 사용하면 터미널을 통해 컨테이너 내부에서 명령어를 입력할 수 있습니다.
-    2. -t (tty):
+    2. -t (tty) :
      2.1. -t 옵션은 가상 터미널을 할당합니다. 즉, 터미널 환경을 에뮬레이션하여 터미널 기반의 텍스트 인터페이스를 사용할 수 있게 해줍니다.
      2.2. 이를 통해 컨테이너 내부에서 터미널을 통해 입력과 출력을 관리할 수 있습니다.
    
@@ -62,10 +63,9 @@ aws lambda functions
     ```text
     컨테이너를 처음 실행할 때 docker run 명령어와 함께 -v 옵션을 사용하여 호스트와 컨테이너 간의 볼륨을 마운트할 수 있습니다. 이를 통해 호스트 파일 시스템의 일부를 컨테이너 내부에 마운트할 수 있습니다.
     ```
-2. docker 다운로드 : [docker-desktop](https://www.docker.com/products/docker-desktop/)
 
 ## Create layer packages
-1. 디렉터리에 필요한 샘플 코드가 포함된 [lambda-functions GitHub](https://github.com/gjwnssud/lambda-functions) 리포지토리를 복제합니다.
+1. 디렉터리에 필요한 샘플 코드가 포함된 <a href="https://github.com/gjwnssud/lambda-functions" target="_blank">lambda-functions GitHub</a> 리포지토리를 복제합니다.
     ```bash
     git clone https://github.com/gjwnssud/lambda-functions.git
     ```
@@ -103,7 +103,7 @@ aws lambda functions
     cp -r create_layer/lib python/
     zip -r layer_content.zip python
     ```
-7. 출처 : [aws-documentation](https://docs.aws.amazon.com/ko_kr/lambda/latest/dg/python-layers.html)
+7. 출처 : <a href="https://docs.aws.amazon.com/ko_kr/lambda/latest/dg/python-layers.html" target="_blank">aws-documentation</a> 
 
 
 ## Contact
