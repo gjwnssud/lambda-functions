@@ -45,7 +45,9 @@ def lambda_handler(event, context):
         image = Image.open(io.BytesIO(image_data))
         if extension in ["heif", "heic"]:  # heif, heic 포맷일 경우 jpg로 컨버팅
             image.save(buffer, "JPEG")
-        image.save(buffer, image.format)
+            logger.info(f"heif to jpg convert complete. image format = {Image.open(buffer).format}")
+        else:
+            image.save(buffer, image.format)
         buffer.seek(0)
 
         # 변환된 이미지를 S3 버킷에 저장
