@@ -1,10 +1,11 @@
-import boto3
-from PIL import Image, ImageFile, ImageSequence, ExifTags
-from pillow_heif import register_heif_opener
-import filetype
 import io
 import json
 import logging
+
+import boto3
+import filetype
+from PIL import Image, ImageFile, ImageSequence, ExifTags
+from pillow_heif import register_heif_opener
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -25,8 +26,6 @@ optimize_suffix = "_opt"
 def lambda_handler(event, context):
     image_data = None
     status_code = 200
-    resized_object_key_prefix = None
-    resized_object_key = None
     job = {}
 
     bucket_name = event['Records'][0]['s3']['bucket']['name']
@@ -45,45 +44,16 @@ def lambda_handler(event, context):
             raise ValueError(f"Unsupported image format: {extension}")
 
         image = Image.open(io.BytesIO(image_data))
-        width, height = image.size
-        logger.info(f"filename = {object_key}, original width = {width}, original height = {height}")
-        job["size"] = image.size
+        # heif, heic일 경우 jpg로 변환
+        if extension in ["heif", "heic"]:
+            buffer = io.BytesIO()
+            image.save(buffer, "JPEG")
+            image = Image.open(buffer)
+            logger.info(f"heif to jpg convert complete. image format = {image.format}")
+        original_width, original_height = image.size
+        logger.info(f"filename = {object_key}, original width = {original_width}, original height = {original_height}")
 
-        ratio = None
-        if post_path in object_key:
-            if width > 960:
-                ratio = 960 / width
-                width = 960
-            resized_object_key_prefix = post_path
-        elif reply_path in object_key:
-            if width > 650:
-                ratio = 650 / width
-                width = 650
-            resized_object_key_prefix = reply_path
-        elif creator_profile_path in object_key:
-            if width > 726:
-                ratio = 726 / width
-                width = 726
-            resized_object_key_prefix = creator_profile_path
-        elif profile_path in object_key:
-            if width > 356:
-                ratio = 356 / width
-                width = 356
-            resized_object_key_prefix = profile_path
-        elif background_path in object_key:
-            if width > 1200:
-                ratio = 1200 / width
-                width = 1200
-            resized_object_key_prefix = background_path
-
-        # 리사이즈 정의
-        if ratio is not None:
-            height = int(height * ratio)
-        job["resize"] = (width, height)
-
-        resized_object_key = object_key.replace(resized_object_key_prefix, resized_object_key_prefix + optimize_suffix)
-        job["resized_key"] = resized_object_key
-
+        image_format = image.format
         # EXIF 데이터 처리 (회전 방지)
         try:
             if hasattr(image, '_getexif'):
@@ -93,18 +63,57 @@ def lambda_handler(event, context):
                     orientation_key = [key for key, value in ExifTags.TAGS.items() if value == 'Orientation']
                     if orientation_key:
                         orientation = exif.get(orientation_key[0])
-                        if orientation == 3:
+                        logger.info(f"orientation : {orientation}")
+                        if orientation == 2:
+                            image = image.transpose(Image.FLIP_LEFT_RIGHT)
+                        elif orientation == 3:
                             image = image.rotate(180, expand=True)
+                        elif orientation == 4:
+                            image = image.rotate(180).transpose(Image.FLIP_LEFT_RIGHT)
+                        elif orientation == 5:
+                            image = image.rotate(270, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
                         elif orientation == 6:
                             image = image.rotate(270, expand=True)
+                        elif orientation == 7:
+                            image = image.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
                         elif orientation == 8:
                             image = image.rotate(90, expand=True)
         except (AttributeError, KeyError, IndexError) as e:
             # EXIF 데이터가 없거나 처리 중 오류 발생 시
             logger.warning(f"No EXIF orientation data found or error processing EXIF: {e}")
 
+        width, height = image.size
+        job["size"] = image.size
+
+        ratio = None
+        if post_path in object_key:
+            if width > 960:
+                ratio = 960 / width
+                width = 960
+        elif reply_path in object_key:
+            if width > 650:
+                ratio = 650 / width
+                width = 650
+        elif creator_profile_path in object_key:
+            if width > 726:
+                ratio = 726 / width
+                width = 726
+        elif profile_path in object_key:
+            if width > 356:
+                ratio = 356 / width
+                width = 356
+        elif background_path in object_key:
+            if width > 1200:
+                ratio = 1200 / width
+                width = 1200
+
+        # 리사이즈 정의
+        if ratio is not None:
+            height = int(height * ratio)
+        job["resize"] = (width, height)
+
         # 이미지, GIF 구분 후 리사이징
-        image_format = image.format
+        # image_format = image.format
         buffer = io.BytesIO()  # byte 버퍼 생성
         if image_format.upper() == 'GIF':
             frames = []
@@ -121,6 +130,8 @@ def lambda_handler(event, context):
         buffer.seek(0)
 
         # 리사이즈한 이미지를 S3 버킷에 저장
+        resized_object_key = get_resized_object_key(object_key)
+        job["resized_key"] = resized_object_key
         logger.info(f"resized filename = {resized_object_key}, resized width = {width}, resized height = {height}")
         s3_client.put_object(Bucket=bucket_name, Key=resized_object_key, Body=buffer)
     except Exception as e:
@@ -129,14 +140,25 @@ def lambda_handler(event, context):
         job["error_msg"] = e
 
         # 원본 이미지를 그대로 저장
-        buffer = io.BytesIO()
-        image = Image.open(io.BytesIO(image_data))
-        image.save(buffer, format=image.format)
-        buffer.seek(0)
-        s3_client.put_object(Bucket=bucket_name, Key=resized_object_key, Body=buffer)
+        s3_client.put_object(Bucket=bucket_name, Key=get_resized_object_key(object_key), Body=io.BytesIO(image_data))
         raise
     finally:
         return {
             'statusCode': status_code,
             'body': json.dumps(job, indent=4, sort_keys=True, default=str)
         }
+
+
+def get_resized_object_key(object_key):
+    resized_object_key_prefix = None
+    if post_path in object_key:
+        resized_object_key_prefix = post_path
+    elif reply_path in object_key:
+        resized_object_key_prefix = reply_path
+    elif creator_profile_path in object_key:
+        resized_object_key_prefix = creator_profile_path
+    elif profile_path in object_key:
+        resized_object_key_prefix = profile_path
+    elif background_path in object_key:
+        resized_object_key_prefix = background_path
+    return object_key.replace(resized_object_key_prefix, resized_object_key_prefix + optimize_suffix)
