@@ -41,18 +41,18 @@ def lambda_handler(event, context):
         if extension not in list(map(lambda s: str.replace(s, ".", ""), Image.registered_extensions().keys())):
             raise ValueError(f"Unsupported image format: {extension}")
 
-        buffer = io.BytesIO()
         image = Image.open(io.BytesIO(image_data))
-        if extension in ["heif", "heic"]:  # heif, heic 포맷일 경우 jpg로 컨버팅
-            image.save(buffer, "JPEG")
-            logger.info(f"heif to jpg convert complete. image format = {Image.open(buffer).format}")
-        else:
-            image.save(buffer, image.format)
-        buffer.seek(0)
-
-        # 변환된 이미지를 S3 버킷에 저장
         logger.info(f"converted filename = {converted_object_key}")
-        s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=buffer)
+        if extension in ["heif", "heic"]:  # heif, heic 포맷일 경우 jpg로 컨버팅
+            # 변환된 이미지를 S3 버킷에 저장
+            buffer = io.BytesIO()
+            image.save(buffer, "JPEG")
+            buffer.seek(0)
+            logger.info(f"heif to jpg convert complete. image format = {Image.open(buffer).format}")
+            s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=buffer)
+        else:
+            # 원본 이미지를 S3 버킷에 저장
+            s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=image_data)
     except Exception as e:
         logger.error(f"Exception = {e}")
         status_code = 500
@@ -60,7 +60,7 @@ def lambda_handler(event, context):
 
         # 원본 이미지를 그대로 저장
         logger.info(f"converted filename = {converted_object_key}")
-        s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=io.BytesIO(image_data))
+        s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=image_data)
         raise
     finally:
         return {
