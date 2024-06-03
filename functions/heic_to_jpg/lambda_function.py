@@ -48,8 +48,8 @@ def lambda_handler(event, context):
             buffer = io.BytesIO()
             image.save(buffer, "JPEG")
             buffer.seek(0)
-            logger.info(f"heif to jpg convert complete. image format = {Image.open(buffer).format}")
             s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=buffer)
+            logger.info(f"heif to jpg convert complete.")
         else:
             # 원본 이미지를 S3 버킷에 저장
             s3_client.put_object(Bucket=bucket_name, Key=converted_object_key, Body=image_data)
