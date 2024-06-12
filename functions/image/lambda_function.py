@@ -20,6 +20,7 @@ reply_path = contents_path + "/reply"
 profile_path = "profile"
 creator_profile_path = "creator/" + profile_path
 background_path = "background"
+crtr_notice_path = contents_path + "/crtr_notice"
 optimize_suffix = "_opt"
 
 
@@ -86,7 +87,7 @@ def lambda_handler(event, context):
         job["size"] = image.size
 
         ratio = None
-        if post_path in object_key:
+        if post_path in object_key or crtr_notice_path in object_key:
             if width > 960:
                 ratio = 960 / width
                 width = 960
@@ -161,4 +162,6 @@ def get_resized_object_key(object_key):
         resized_object_key_prefix = profile_path
     elif background_path in object_key:
         resized_object_key_prefix = background_path
+    elif crtr_notice_path in object_key:
+        resized_object_key_prefix = crtr_notice_path
     return object_key.replace(resized_object_key_prefix, resized_object_key_prefix + optimize_suffix)
