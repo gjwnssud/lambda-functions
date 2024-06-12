@@ -42,7 +42,7 @@ def lambda_handler(event, context):
         extension = filetype.guess_extension(image_data)
         logger.info(f"file type = {extension}")
         if extension not in list(map(lambda s: str.replace(s, ".", ""), Image.registered_extensions().keys())):
-            raise ValueError(f"Unsupported image format: {extension}")
+            raise ValueError(f"Unsupported image format: {extension}, object key = {object_key}")
 
         image = Image.open(io.BytesIO(image_data))
         # heif, heic일 경우 jpg로 변환
