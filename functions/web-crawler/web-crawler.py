@@ -1,5 +1,5 @@
+from chromedriver_py import binary_path
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
@@ -8,11 +8,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 def crawling(url):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument(
             "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
     driver = None
     try:
-        service = Service('chromedriver')
+        service = webdriver.ChromeService(executable_path=binary_path)
         driver = webdriver.Chrome(service=service, options=chrome_options)
 
         driver.get(url)
