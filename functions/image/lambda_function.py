@@ -16,7 +16,9 @@ s3_client = boto3.client("s3")
 
 contents_path = "contents/release"
 post_path = contents_path + "/post"
+creator_dao_post_path = contents_path + "/creator-dao/post"
 reply_path = contents_path + "/reply"
+creator_dao_reply_path = contents_path + "/creator-dao/reply"
 profile_path = "profile"
 creator_profile_path = "creator/" + profile_path
 background_path = "background"
@@ -87,7 +89,7 @@ def lambda_handler(event, context):
         job["size"] = image.size
 
         ratio = None
-        if post_path in object_key or crtr_notice_path in object_key:
+        if post_path in object_key or crtr_notice_path in object_key or creator_dao_post_path in object_key:
             if width > 960:
                 ratio = 960 / width
                 width = 960
@@ -164,4 +166,8 @@ def get_resized_object_key(object_key):
         resized_object_key_prefix = background_path
     elif crtr_notice_path in object_key:
         resized_object_key_prefix = crtr_notice_path
+    elif creator_dao_post_path in object_key:
+        resized_object_key_prefix = creator_dao_post_path
+    elif creator_dao_reply_path in object_key:
+        resized_object_key_prefix = creator_dao_reply_path
     return object_key.replace(resized_object_key_prefix, resized_object_key_prefix + optimize_suffix)
